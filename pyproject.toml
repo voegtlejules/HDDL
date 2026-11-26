@@ -10,3 +10,8 @@ dependencies = [
     "torchvision>=0.29.1",
     "tqdm>=4.70.1",
 ]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.4.0",
+]
