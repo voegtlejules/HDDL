@@ -13,9 +13,7 @@ Broad course question: **how much data does a deep learning model really need?**
  
 | | Hypothesis | Refuted if |
 |---|---|---|
-| **H1** | For small budgets (k ≤ 10 / class), k-means **prototypes** in the TSDAE space beat stratified random sampling (paired test over 5 seeds); the advantage vanishes for large k. | No significant gap at k ≤ 10, or a constant / reversed gap at every k. |
-| **H2** | At fixed k, the **MMD** between a subset and the full pool is negatively correlated with test accuracy (Spearman ρ < −0.5), MMD measured in an encoder *independent* of the one used for selection. | ρ ≈ 0, or weaker than the correlation with mean difficulty. |
-| *H3 (bonus)* | Subsets selected in an unsupervised latent space transfer to another model (RoBERTa-base) better than EL2N subsets computed with DistilBERT. | Method ranking flips between models. |
+| **H0** | For small budgets (k ≤ 10 / class), k-means **prototypes** in the TSDAE space beat stratified random sampling (paired test over 5 seeds); the advantage vanishes for large k. | No significant gap at k ≤ 10, or a constant / reversed gap at every k. |
  
 "Good performance" = test accuracy ≥ 99 % of the full-pool model. Also reported: macro-F1 and worst-class accuracy.
  
@@ -67,15 +65,15 @@ Check that your `results/split_info.json` has the same `pool_ids_sha1` as the co
  
 | Step | Script | Input → Output | Owner | Status |
 |---|---|---|---|---|
-| 00 | `scripts/00_prepare_data.py` | Banking77 → `artifacts/splits/` | C | ✅ |
-| 01 | `scripts/01_train_tsdae.py` | pool text → `artifacts/models/tsdae/` | A | ⬜ |
-| 02 | `scripts/02_compute_embeddings.py` | pool → `artifacts/embeddings/{tsdae,sbert,tfidf}.npy` (+ `.ids.json`) | A | ⬜ |
-| 03 | `scripts/03_compute_difficulty.py` | full-pool runs × seeds → `artifacts/scores/{el2n,cartography}.parquet` | B | ⬜ |
-| 04 | `scripts/04_select.py` | embeddings / scores → `artifacts/subsets/{enc}_{method}_k{k}_s{seed}.json` | B | ⬜ |
-| 05 | `scripts/05_train_eval.py` | subset + `configs/base.yaml` → `results/runs/{run_id}.json` | C | ⬜ |
+| 00 | `scripts/prepare_data.py` | Banking77 → `artifacts/splits/` | C | ✅ |
+| 01 | `scripts/train_tsdae.py` | pool text → `artifacts/models/tsdae/` | A | ⬜ |
+| 02 | `scripts/compute_embeddings.py` | pool → `artifacts/embeddings/{tsdae,sbert,tfidf}.npy` (+ `.ids.json`) | A | ⬜ |
+| 03 | `scripts/compute_difficulty.py` | full-pool runs × seeds → `artifacts/scores/{el2n,cartography}.parquet` | B | ⬜ |
+| 04 | `scripts/select.py` | embeddings / scores → `artifacts/subsets/{enc}_{method}_k{k}_s{seed}.json` | B | ⬜ |
+| 05 | `scripts/train_eval.py` | subset + `configs/base.yaml` → `results/runs/{run_id}.json` | C | ⬜ |
 | — | `scripts/launch_grid.py` | `configs/grid.yaml` → runs 05 in parallel, skips finished runs | C | ⬜ |
-| 06 | `scripts/06_representativeness.py` | subsets + embeddings → MMD / coverage columns | A | ⬜ |
-| 07 | `scripts/07_analyze.py` | `results/runs.csv` → `figures/`, statistical tests | C | ⬜ |
+| 06 | `scripts/representativeness.py` | subsets + embeddings → MMD / coverage columns | A | ⬜ |
+| 07 | `scripts/analyze.py` | `results/runs.csv` → `figures/`, statistical tests | C | ⬜ |
  
 Steps 00–04 are short and sequential; step 05 is the long, embarrassingly parallel part
 (one independent fine-tuning per `(encoder, method, k, seed)`).
@@ -88,6 +86,7 @@ Steps 00–04 are short and sequential; step 05 is the long, embarrassingly para
 | `kmeans` | embeddings | k-means with k clusters per class → nearest real example to each centroid |
 | `kcenter` | embeddings | greedy farthest-point coverage |
 | `moderate` | embeddings | examples whose distance to the class centre is closest to the median |
+| `gmm` | embeddings | examples whose location is in a density estimate or is not ? |
 | `el2n` | difficulty runs | highest ‖softmax − one-hot‖₂ after 1–2 epochs, averaged over seeds |
 | `cartography` | difficulty runs | most "ambiguous" examples (highest variability of p(y\*\|x) across epochs) |
  
